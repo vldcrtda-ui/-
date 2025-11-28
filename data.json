@@ -1,0 +1,31 @@
+{
+  "admins": [
+    1802561874
+  ],
+  "pending": {
+    "f8f2dce9-17e1-4ca1-bed8-f3621e3c6dd2": {
+      "type": "photo",
+      "user_id": 1802561874,
+      "username": "darkvladius00",
+      "first_name": "Vlad",
+      "last_name": null,
+      "text": "",
+      "force_anon": false,
+      "photo_id": "AgACAgIAAxkBAAMLaShNZNG7c3NebnPkEL6-1k2q5mQAAsgRaxtJISFJXfbDMDO0Z4ABAAMCAAN5AAM2BA"
+    },
+    "c89ae500-45ee-4692-94bb-0a0b578b3b6b": {
+      "type": "photo",
+      "user_id": 1802561874,
+      "username": "darkvladius00",
+      "first_name": "Vlad",
+      "last_name": null,
+      "text": "",
+      "force_anon": false,
+      "photo_id": "AgACAgIAAxkBAAMdaShTVM0EZWXOC_ZXMyubKonvgG8AAjgRaxsXFUFJTRF5z4KtHc4BAAMCAAN5AAM2BA"
+    }
+  },
+  "last_sent": {
+    "1609665435": 1764251573,
+    "7301088338": 1764252288
+  }
+}
