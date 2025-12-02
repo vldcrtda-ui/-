@@ -20,6 +20,7 @@ from telegram.ext import (
     ContextTypes,
     MessageHandler,
     filters,
+    Updater,
 )
 from telegram.request import HTTPXRequest
 
@@ -29,6 +30,12 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_FILE = LOG_DIR / "bot.log"
 
 load_dotenv(BASE_DIR / ".env")
+
+# Work around python-telegram-bot <21 incompatibility with Python 3.13:
+# Updater.__slots__ may miss __polling_cleanup_cb, leading to AttributeError during init.
+_updater_slots = getattr(Updater, "__slots__", ())
+if "__polling_cleanup_cb" not in _updater_slots:
+    Updater.__slots__ = tuple(_updater_slots) + ("__polling_cleanup_cb",)
 
 
 def setup_logging() -> logging.Logger:
