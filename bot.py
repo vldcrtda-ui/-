@@ -23,11 +23,12 @@ from telegram.ext import (
 )
 from telegram.request import HTTPXRequest
 
-DATA_FILE = Path("data.json")
-LOG_DIR = Path("logs")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_FILE = BASE_DIR / "data.json"
+LOG_DIR = BASE_DIR / "logs"
 LOG_FILE = LOG_DIR / "bot.log"
 
-load_dotenv()
+load_dotenv(BASE_DIR / ".env")
 
 
 def setup_logging() -> logging.Logger:
