@@ -31,12 +31,6 @@ LOG_FILE = LOG_DIR / "bot.log"
 
 load_dotenv(BASE_DIR / ".env")
 
-# Work around python-telegram-bot <21 incompatibility with Python 3.13:
-# Updater.__slots__ may miss __polling_cleanup_cb, leading to AttributeError during init.
-_updater_slots = getattr(Updater, "__slots__", ())
-if "__polling_cleanup_cb" not in _updater_slots:
-    Updater.__slots__ = tuple(_updater_slots) + ("__polling_cleanup_cb",)
-
 
 def setup_logging() -> logging.Logger:
     handlers = [logging.StreamHandler()]
@@ -49,6 +43,20 @@ def setup_logging() -> logging.Logger:
 
 
 logger = setup_logging()
+
+# Work around python-telegram-bot <21 incompatibility with Python 3.13:
+# some builds miss __polling_cleanup_cb in __slots__, causing AttributeError.
+try:
+    from telegram.ext import _applicationbuilder as _appbuilder
+
+    class PatchedUpdater(Updater):
+        __slots__ = ("__dict__",)
+
+    _appbuilder.Updater = PatchedUpdater
+    Updater = PatchedUpdater
+    logger.info("Patched Updater for Python 3.13 (__dict__ added).")
+except Exception as exc:  # noqa: BLE001
+    logger.warning("Failed to patch Updater: %s", exc)
 
 
 class NoProxyHTTPXRequest(HTTPXRequest):
