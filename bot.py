@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import httpx
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
@@ -20,6 +21,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telegram.request import HTTPXRequest
 
 DATA_FILE = Path("data.json")
 LOG_DIR = Path("logs")
@@ -41,6 +43,22 @@ def setup_logging() -> logging.Logger:
 logger = setup_logging()
 
 
+class NoProxyHTTPXRequest(HTTPXRequest):
+    """HTTPX client that ignores proxy-related environment variables."""
+
+    def __init__(self, *args, force_ipv4: bool = False, **kwargs):
+        self._force_ipv4 = force_ipv4
+        super().__init__(*args, **kwargs)
+
+    def _build_client(self) -> httpx.AsyncClient:
+        kwargs = dict(self._client_kwargs)
+        if self._force_ipv4:
+            kwargs["transport"] = httpx.AsyncHTTPTransport(
+                local_address="0.0.0.0",
+            )
+        return httpx.AsyncClient(**kwargs, trust_env=False)
+
+
 def parse_chat_identifier(raw: str, field: str):
     value = (raw or "").strip()
     if value.startswith("http"):
@@ -56,11 +74,18 @@ def parse_chat_identifier(raw: str, field: str):
     return f"@{value}"
 
 
+def env_flag(name: str) -> bool:
+    return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def load_config() -> Dict[str, Any]:
     token = os.environ.get("BOT_TOKEN")
     mod_chat = os.environ.get("MOD_CHAT_ID")
     public_chat = os.environ.get("PUBLIC_CHAT_ID")
     main_admin = os.environ.get("MAIN_ADMIN_ID")
+    force_ipv4 = (
+        env_flag("FORCE_IPV4") if "FORCE_IPV4" in os.environ else False
+    )
     missing = [name for name, val in {
         "BOT_TOKEN": token,
         "MOD_CHAT_ID": mod_chat,
@@ -74,6 +99,7 @@ def load_config() -> Dict[str, Any]:
         "mod_chat_id": parse_chat_identifier(mod_chat, "MOD_CHAT_ID"),
         "public_chat_id": parse_chat_identifier(public_chat, "PUBLIC_CHAT_ID"),
         "main_admin_id": int(main_admin),
+        "force_ipv4": force_ipv4,
     }
 
 
@@ -422,7 +448,15 @@ def main() -> None:
     global CONFIG, STATE
     CONFIG = load_config()
     STATE = load_state(CONFIG["main_admin_id"])
-    application = Application.builder().token(CONFIG["token"]).build()
+    request = NoProxyHTTPXRequest(
+        proxy=None,
+        force_ipv4=CONFIG.get("force_ipv4", False),
+    )
+    logger.info(
+        "Бот запускается (proxy=disabled, force_ipv4=%s)",
+        CONFIG.get("force_ipv4"),
+    )
+    application = Application.builder().token(CONFIG["token"]).request(request).build()
 
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("anon", anon_command))
