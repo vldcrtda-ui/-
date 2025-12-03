@@ -3,6 +3,7 @@ import html
 import json
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -57,6 +58,29 @@ try:
     logger.info("Patched Updater for Python 3.13 (__dict__ added).")
 except Exception as exc:  # noqa: BLE001
     logger.warning("Failed to patch Updater: %s", exc)
+
+
+def start_health_server() -> None:
+    """Start a tiny HTTP server so Render web service sees an open port."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            body = b"ok"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A003
+            return  # silence default stdout logging
+
+    port = int(os.environ.get("PORT", "8000"))
+    server = ThreadingHTTPServer(("", port), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Health server started on port %s", port)
 
 
 class NoProxyHTTPXRequest(HTTPXRequest):
@@ -464,6 +488,7 @@ def main() -> None:
     global CONFIG, STATE
     CONFIG = load_config()
     STATE = load_state(CONFIG["main_admin_id"])
+    start_health_server()
     request = NoProxyHTTPXRequest(
         proxy=None,
         force_ipv4=CONFIG.get("force_ipv4", False),
