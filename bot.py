@@ -511,7 +511,11 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message))
 
     logger.info("Бот запущен")
-    application.run_polling(close_loop=False)
+    # drop_pending_updates=True на всякий случай очищает накопившуюся очередь
+    application.run_polling(
+        close_loop=False,
+        drop_pending_updates=True,
+    )
 
 
 if __name__ == "__main__":
